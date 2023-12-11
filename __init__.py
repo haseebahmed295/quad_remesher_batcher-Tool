@@ -33,6 +33,7 @@ import bpy
 import time
 from bpy.props import (
     PointerProperty,
+    FloatProperty
 )
 
 
@@ -40,7 +41,7 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
     bl_idname = "qremesher.remesh_selected"
     bl_label = "Remesh Selected Objects"
     bl_description = "Quad Remesh all selected objects"
-    # bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -71,7 +72,7 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
                     # open a window showing the button to open link https://exoside.com/
                     bpy.ops.wm.call_menu('INVOKE_DEFAULT' ,name=No_MT_Remesher.bl_idname)
                     return {'FINISHED'}
-
+            time.sleep(context.scene.sleep_time)
             # Move on to the next object
             self.object_index += 1
 
@@ -82,7 +83,7 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
         self.object_index = 0
 
         context.window_manager.modal_handler_add(self)
-        self._timer = context.window_manager.event_timer_add(1.0, window=context.window)
+        self._timer = context.window_manager.event_timer_add(.01, window=context.window)
 
         return {'RUNNING_MODAL'}
 
@@ -119,7 +120,42 @@ class SCRIPT_OT_RunScript(bpy.types.Operator):
     def invoke(self, context, event):
         return self.execute(context)
 
-# bpy.ops.qremesher.remesh()
+class SCRIPT_OT_SetTimer(bpy.types.Operator):
+    bl_idname = "qremesher.set_timer"
+    bl_label = "Set Timer"
+    bl_description = 'Set the sleep time by remeshing selected object'
+    _timer = None
+    _objects_len = 0
+    ran = False
+
+    def modal(self, context, event):
+        if event.type == 'TIMER':
+            # If the number of objects has increased, a new object has been added
+            if len(bpy.data.objects) > self._objects_len:
+                
+                # Get the current time after the operation
+                end_time = time.time()
+
+                time_taken = end_time - self.start_time
+
+                print(f"Time taken by the operation: {time_taken} seconds")
+                context.scene.sleep_time = time_taken
+                self.ran = True
+        if self.ran:
+            return {'FINISHED'}
+        else:
+            return {'PASS_THROUGH'}
+
+    def execute(self, context):
+        self.start_time = time.time()
+        bpy.ops.qremesher.remesh()
+        self._objects_len = len(bpy.data.objects)
+        self._timer = context.window_manager.event_timer_add(0.1, window=context.window)
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+
+    def cancel(self, context):
+        context.window_manager.event_timer_remove(self._timer)
 
 class Quad_PT_Remesher_BatcherPanel(bpy.types.Panel):
     """Docstring of Quad_Remesher_BatcherPanel"""
@@ -136,6 +172,10 @@ class Quad_PT_Remesher_BatcherPanel(bpy.types.Panel):
         if not 'quad_remesher_1_2' in bpy.context.preferences.addons:
             layout.label(text="Quad Remesher is not available.", icon='ERROR')
         layout.label(text=f'Selected Mesh Count: {len(list(x for x in context.selected_objects if x.type == "MESH"))}')
+        row = layout.row()
+        row.label(text=f'Sleep Time')
+        row.prop(context.scene, "sleep_time" , text='')
+        row.operator(SCRIPT_OT_SetTimer.bl_idname, text = "", icon = 'RECOVER_LAST')
         # put script prop in box with info as lable 
         box = layout.box()
         textTowrap = "Set Script to execute after remeshing. Leave it empty if you don't want to run any script."
@@ -156,13 +196,15 @@ classes = (
     SCRIPT_OT_RunScript,
     Quad_PT_Remesher_BatcherPanel,
     Quad_Remesher_BatcherPanel_operator,
-    No_MT_Remesher 
+    No_MT_Remesher ,
+    SCRIPT_OT_SetTimer
 )
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    bpy.types.Scene.after_script = PointerProperty(type=bpy.types.Text)
+    bpy.types.Scene.after_script = PointerProperty(type=bpy.types.Text , name="After Script" , description='Script to execute after remeshing each object ')
+    bpy.types.Scene.sleep_time = FloatProperty(min=0.1, default=1 , description='Waited time before remeshing next object')
     
 def unregister():
     for cls in classes:
