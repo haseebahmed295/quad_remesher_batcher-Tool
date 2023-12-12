@@ -48,6 +48,8 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
 
     def modal(self, context, event):
         if event.type == 'TIMER':
+            if self.object_index > 0 and bpy.context.scene.after_script is not None:
+                bpy.ops.script.run_script()
             if self.object_index >= len(self.selected_objects):
                 self.cancel(context)
                 return {'FINISHED'}
@@ -57,13 +59,18 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
 
             # Deselect all
             bpy.ops.object.select_all(action='DESELECT')
-
             # Set as active object
             obj.select_set(True)
             context.view_layer.objects.active = obj
 
-            # Run remesher
-            bpy.ops.qremesher.remesh()
+            try:
+                bpy.ops.qremesher.remesh()
+            except:
+                # open this link https://exoside.com/
+                if not 'quad_remesher_1_2' in bpy.context.preferences.addons:
+                    # open a window showing the button to open link https://exoside.com/
+                    bpy.ops.wm.call_menu('INVOKE_DEFAULT' ,name=No_MT_Remesher.bl_idname)
+                    return {'FINISHED'}
 
             # Move on to the next object
             self.object_index += 1
