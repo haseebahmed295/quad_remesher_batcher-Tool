@@ -40,6 +40,7 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
     bl_idname = "qremesher.remesh_selected"
     bl_label = "Remesh Selected Objects"
     bl_description = "Quad Remesh all selected objects"
+    # bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -47,32 +48,23 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
 
     def modal(self, context, event):
         if event.type == 'TIMER':
-            if self.object_index > 0:
-                bpy.ops.script.run_script()
             if self.object_index >= len(self.selected_objects):
                 self.cancel(context)
                 return {'FINISHED'}
-            
+
             # Get the next object
             obj = self.selected_objects[self.object_index]
+
             # Deselect all
             bpy.ops.object.select_all(action='DESELECT')
-            if obj.type != 'MESH':
-                self.object_index += 1
-                return {'PASS_THROUGH'}
+
             # Set as active object
             obj.select_set(True)
             context.view_layer.objects.active = obj
 
             # Run remesher
-            try:
-                bpy.ops.qremesher.remesh()
-            except AttributeError:
-                # open this link https://exoside.com/
-                if not 'quad_remesher_1_2' in bpy.context.preferences.addons:
-                    # open a window showing the button to open link https://exoside.com/
-                    bpy.ops.wm.call_menu('INVOKE_DEFAULT' ,name=No_MT_Remesher.bl_idname)
-                    return {'FINISHED'}
+            bpy.ops.qremesher.remesh()
+
             # Move on to the next object
             self.object_index += 1
 
