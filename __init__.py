@@ -66,7 +66,6 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
                 # Set as active object
                 obj.select_set(True)
                 context.view_layer.objects.active = obj
-
                 try:
                     bpy.ops.qremesher.remesh()
                 except:
@@ -74,8 +73,7 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
                     if not 'quad_remesher_1_2' in bpy.context.preferences.addons:
                         # open a window showing the button to open link https://exoside.com/
                         bpy.ops.wm.call_menu('INVOKE_DEFAULT' ,name=No_MT_Remesher.bl_idname)
-                        return {'FINISHED'}
-                # time.sleep(context.scene.sleep_time)
+                        return {'CANCELLED'}
                 # Move on to the next object
                 self.object_index += 1
 
@@ -86,7 +84,6 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
         self.First_time = True
         self.selected_objects = context.selected_objects
         self.object_index = 0
-
         context.window_manager.modal_handler_add(self)
         self._timer = context.window_manager.event_timer_add(.01, window=context.window)
 
@@ -94,6 +91,22 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
 
     def cancel(self, context):
         context.window_manager.event_timer_remove(self._timer)
+
+class Quad_Remesher_Mesh_Checker(bpy.types.Operator):
+    bl_idname = "qremesher.mesh_checker"
+    bl_label = "Mesh Checker"
+    bl_description = "Quad Remesh all selected objects"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        for obj in bpy.context.selected_objects:
+            if obj.type != 'MESH':  
+                self.report({'ERROR'}, "Selected object is not a mesh")
+                return {'CANCELLED'}
+        bpy.ops.qremesher.remesh_selected()
+        return {'FINISHED'}
+
+
 
 class No_MT_Remesher(bpy.types.Menu):
    bl_label = "Custom Menu"
@@ -125,32 +138,6 @@ class SCRIPT_OT_RunScript(bpy.types.Operator):
     def invoke(self, context, event):
         return self.execute(context)
 
-class SCRIPT_OT_SetTimer(bpy.types.Operator):
-    bl_idname = "qremesher.set_timer"
-    bl_label = "Set Timer"
-    bl_description = 'Set the sleep time by remeshing selected object'
-    _timer = None
-    _objects_len = 0
-    ran = False
-
-    def modal(self, context, event):
-        if event.type == 'TIMER':
-            # If the number of objects has increased, a new object has been added
-            if len(bpy.data.objects) > self._objects_len:
-                
-                # Get the current time after the operation
-                end_time = time.time()
-
-                time_taken = end_time - self.start_time
-
-                print(f"Time taken by the operation: {time_taken} seconds")
-                context.scene.sleep_time = time_taken
-                self.ran = True
-        if self.ran:
-            return {'FINISHED'}
-        else:
-            return {'PASS_THROUGH'}
-
     def execute(self, context):
         self.start_time = time.time()
         bpy.ops.qremesher.remesh()
@@ -177,10 +164,6 @@ class Quad_PT_Remesher_BatcherPanel(bpy.types.Panel):
         if not 'quad_remesher_1_2' in bpy.context.preferences.addons:
             layout.label(text="Quad Remesher is not available.", icon='ERROR')
         layout.label(text=f'Selected Mesh Count: {len(list(x for x in context.selected_objects if x.type == "MESH"))}')
-        row = layout.row()
-        row.label(text=f'Sleep Time')
-        row.prop(context.scene, "sleep_time" , text='')
-        row.operator(SCRIPT_OT_SetTimer.bl_idname, text = "", icon = 'RECOVER_LAST')
         # put script prop in box with info as lable 
         box = layout.box()
         textTowrap = "Set Script to execute after remeshing. Leave it empty if you don't want to run any script."
@@ -192,7 +175,7 @@ class Quad_PT_Remesher_BatcherPanel(bpy.types.Panel):
             row.scale_y = 0.6
             row.label(text=text)
         box.prop(context.scene, "after_script", text="Script")
-        layout.operator(Quad_Remesher_BatcherPanel_operator.bl_idname, text = "<<<Batch Remesh>>>")
+        layout.operator(Quad_Remesher_Mesh_Checker.bl_idname, text = "<<<Batch Remesh>>>")
 
 
 
@@ -201,8 +184,8 @@ classes = (
     SCRIPT_OT_RunScript,
     Quad_PT_Remesher_BatcherPanel,
     Quad_Remesher_BatcherPanel_operator,
-    No_MT_Remesher ,
-    SCRIPT_OT_SetTimer
+    No_MT_Remesher,
+    Quad_Remesher_Mesh_Checker
 )
 
 def register():
