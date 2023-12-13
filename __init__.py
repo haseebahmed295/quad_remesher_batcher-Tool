@@ -49,36 +49,41 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
 
     def modal(self, context, event):
         if event.type == 'TIMER':
-            if self.object_index > 0 and bpy.context.scene.after_script is not None:
-                bpy.ops.script.run_script()
-            if self.object_index >= len(self.selected_objects):
-                self.cancel(context)
-                return {'FINISHED'}
-
-            # Get the next object
-            obj = self.selected_objects[self.object_index]
-
-            # Deselect all
-            bpy.ops.object.select_all(action='DESELECT')
-            # Set as active object
-            obj.select_set(True)
-            context.view_layer.objects.active = obj
-
-            try:
-                bpy.ops.qremesher.remesh()
-            except:
-                # open this link https://exoside.com/
-                if not 'quad_remesher_1_2' in bpy.context.preferences.addons:
-                    # open a window showing the button to open link https://exoside.com/
-                    bpy.ops.wm.call_menu('INVOKE_DEFAULT' ,name=No_MT_Remesher.bl_idname)
+            if len (bpy.data.objects) != self.objs or self.First_time:
+                self.objs = len(bpy.data.objects)
+                self.First_time = False
+                if self.object_index > 0 and bpy.context.scene.after_script is not None:
+                    bpy.ops.script.run_script()
+                if self.object_index >= len(self.selected_objects):
+                    self.cancel(context)
                     return {'FINISHED'}
-            time.sleep(context.scene.sleep_time)
-            # Move on to the next object
-            self.object_index += 1
+
+                # Get the next object
+                obj = self.selected_objects[self.object_index]
+
+                # Deselect all
+                bpy.ops.object.select_all(action='DESELECT')
+                # Set as active object
+                obj.select_set(True)
+                context.view_layer.objects.active = obj
+
+                try:
+                    bpy.ops.qremesher.remesh()
+                except:
+                    # open this link https://exoside.com/
+                    if not 'quad_remesher_1_2' in bpy.context.preferences.addons:
+                        # open a window showing the button to open link https://exoside.com/
+                        bpy.ops.wm.call_menu('INVOKE_DEFAULT' ,name=No_MT_Remesher.bl_idname)
+                        return {'FINISHED'}
+                # time.sleep(context.scene.sleep_time)
+                # Move on to the next object
+                self.object_index += 1
 
         return {'PASS_THROUGH'}
 
     def execute(self, context):
+        self.objs = len(bpy.data.objects)
+        self.First_time = True
         self.selected_objects = context.selected_objects
         self.object_index = 0
 
