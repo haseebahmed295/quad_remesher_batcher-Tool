@@ -52,7 +52,7 @@ class Quad_Remesher_BatcherPanel_operator(bpy.types.Operator):
             if len (bpy.data.objects) != self.objs or self.First_time:
                 self.objs = len(bpy.data.objects)
                 self.First_time = False
-                if self.object_index > 0 and bpy.context.scene.after_script is not None:
+                if self.object_index > 0 and context.scene.after_script:
                     bpy.ops.script.run_script()
                 if self.object_index >= len(self.selected_objects):
                     self.cancel(context)
@@ -106,8 +106,6 @@ class Quad_Remesher_Mesh_Checker(bpy.types.Operator):
         bpy.ops.qremesher.remesh_selected()
         return {'FINISHED'}
 
-
-
 class No_MT_Remesher(bpy.types.Menu):
    bl_label = "Custom Menu"
    bl_idname = "No_MT_Remesher"
@@ -122,8 +120,7 @@ class No_MT_Remesher(bpy.types.Menu):
 class SCRIPT_OT_RunScript(bpy.types.Operator):
     bl_idname = "script.run_script"
     bl_label = "Run Script"
-
-
+    bl_description = "Run Script"
     def execute(self, context):
         try:
             if context.scene.after_script is None:
@@ -134,20 +131,6 @@ class SCRIPT_OT_RunScript(bpy.types.Operator):
             self.report({'ERROR'}, f"Error executing script: {str(e)}")
 
         return {'FINISHED'}
-
-    def invoke(self, context, event):
-        return self.execute(context)
-
-    def execute(self, context):
-        self.start_time = time.time()
-        bpy.ops.qremesher.remesh()
-        self._objects_len = len(bpy.data.objects)
-        self._timer = context.window_manager.event_timer_add(0.1, window=context.window)
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
-
-    def cancel(self, context):
-        context.window_manager.event_timer_remove(self._timer)
 
 class Quad_PT_Remesher_BatcherPanel(bpy.types.Panel):
     """Docstring of Quad_Remesher_BatcherPanel"""
@@ -175,7 +158,7 @@ class Quad_PT_Remesher_BatcherPanel(bpy.types.Panel):
             row.scale_y = 0.6
             row.label(text=text)
         box.prop(context.scene, "after_script", text="Script")
-        layout.operator(Quad_Remesher_Mesh_Checker.bl_idname, text = "<<<Batch Remesh>>>")
+        layout.operator(Quad_Remesher_Mesh_Checker.bl_idname, text = "<<< Batch Remesh >>>")
 
 
 
@@ -192,7 +175,6 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.Scene.after_script = PointerProperty(type=bpy.types.Text , name="After Script" , description='Script to execute after remeshing each object ')
-    bpy.types.Scene.sleep_time = FloatProperty(min=0.1, default=1 , description='Waited time before remeshing next object')
     
 def unregister():
     for cls in classes:
