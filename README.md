@@ -1,0 +1,1 @@
+The primary motivation behind creating this addon was the complaints of numerous users of the quad remesher with blender over its inability to remesh multiple objects at once without having to choose each one individually.
