@@ -1,1 +1,3 @@
-The primary motivation behind creating this addon was the complaints of numerous users of the quad remesher with blender over its inability to remesh multiple objects at once without having to choose each one individually.
+This is addon is additional tool for people who use Quad Remesher by Exoside. 
+This addon allows you to remesh multiple object in a single click . 
+For installation just download as zip and install it in blender . Make sure you have Quad remesher already installed
